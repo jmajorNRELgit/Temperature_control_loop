@@ -100,36 +100,65 @@ voltage = sum(temp_pid.Compute(DAQ.measure_thermocouples([2])[0],20,time()))
 master_temp = []
 
 
+for p in np.arange(.4,1.2,.1):
 
-for i in np.arange(-30,10,10):
-    set_point = i
-    while True:
-        try:
-            temp = DAQ.measure_thermocouples([2])[0]
-            voltage = sum(temp_pid.Compute(temp,set_point,time()))
-            master_temp.append(temp)
-            print('STD: ', np.std(master_temp[-10:]))
-            print(voltage)
-            power.set_voltage(voltage)
-            if temp < set_point +1 and temp > set_point -1 and np.std(master_temp[-10:]) < .05:
-                for i in range(30):
+    for i in np.arange(.005,.03,.005):
+
+        temp_pid = PID(p, i, 1, time())
+
+        itteration = []
+
+        for it in np.arange(-10,10,10):
+            set_point = it
+            while True:
+                try:
                     temp = DAQ.measure_thermocouples([2])[0]
-                    master_temp.append(temp)
+                    voltage = sum(temp_pid.Compute(temp,set_point,time()))
+                    itteration.append(temp)
+                    print('STD: ', np.std(itteration[-10:]))
+                    print('Temp: ' ,temp, 'voltage: ',voltage, '  I: ',i, '  P: ',p)
+                    print('set temp: ',it)
+                    power.set_voltage(voltage)
+                    if temp > 30:
+                        power.set_voltage(0)
+                        print('overtemp')
+                        sys.exit()
+                    if temp < set_point +1 and temp > set_point -1 and np.std(itteration[-10:]) < .009:
+                        for k in range(30):
+                            temp = DAQ.measure_thermocouples([2])[0]
+                            voltage = sum(temp_pid.Compute(temp,set_point,time()))
+                            itteration.append(temp)
+                            print('STD: ', np.std(itteration[-10:]))
+                            print('voltage: ',voltage, '  I: ',i, '  P: ',p)
+                            power.set_voltage(voltage)
+                            sleep(1)
+                        print('Next temp')
+                        break
                     sleep(1)
-                print('Next temp')
-                break
-            sleep(1)
 
 
-        except:
-            power.set_voltage(0)
-            print('Error')
-            print(max(master_temp))
-            plt.plot(master_temp)
-            sys.exit()
-            break
+                except:
+                    power.set_voltage(0)
+                    print('Error')
+                    print(max(itteration))
+                    plt.plot(itteration)
+                    sys.exit()
+                    break
+
+        master_temp.append(itteration)
+        master_temp.append(p)
+        master_temp.append(i)
+
+        power.set_voltage(0)
+        sleep(75)
 
 power.set_voltage(0)
 print('Error')
 print(max(master_temp))
 plt.plot(master_temp)
+
+for i in range(0,7,3):
+    plt.plot(master_temp[i], label = master_temp[i+2])
+
+plt.legend()
+plt.show()
