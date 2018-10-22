@@ -83,7 +83,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-DAQ = DAQ.DAQ('GPIB1::3::INSTR')
+DAQ = DAQ.DAQ('GPIB3::3::INSTR')
 print(DAQ.check_for_thermocouples())
 channel = [2]
 
