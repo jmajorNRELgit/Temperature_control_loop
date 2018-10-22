@@ -100,7 +100,7 @@ voltage = sum(temp_pid.Compute(DAQ.measure_thermocouples([2])[0],20,time()))
 master_temp = []
 
 
-for p in np.arange(.4,1.2,.1):
+for p in np.arange(.8,1.2,.1):
 
     for i in np.arange(.005,.03,.005):
 
