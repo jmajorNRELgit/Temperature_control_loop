@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Tue Oct 23 09:01:58 2018
+
+@author: jmajor
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Wed Oct 17 10:32:51 2018
 
 @author: jmajor
@@ -91,66 +98,58 @@ power = power.sorensen_power('GPIB2::1::INSTR')
 power.set_current(2)
 power.set_voltage(0)
 
-temp_pid = PID(.9, .02, 1, time())
 
-set_point = -30
 
-voltage = sum(temp_pid.Compute(DAQ.measure_thermocouples([2])[0],20,time()))
+
 
 master_temp = []
 
-#Pid tuning at 10 degree incriments
-for p in np.arange(.8,1.2,.1):
+P = 1
+I = .01
+D = 1
 
-    for i in np.arange(.005,.03,.005):
+temp_pid = PID(P, I, D, time())
 
-        temp_pid = PID(p, i, 1, time())
 
-        itteration = []
 
-        for it in np.arange(-10,10,10):
-            set_point = it
-            while True:
-                try:
+for i in np.arange(90,200,10): #Temperature range
+    set_point = i
+    while True:
+        try:
+            temp = DAQ.measure_thermocouples([2])[0]
+            voltage = sum(temp_pid.Compute(temp,set_point,time()))
+            master_temp.append(temp)
+            print('STD: ', np.std(master_temp[-10:]))
+            print('set temp: ',i)
+            power.set_voltage(voltage)
+            if temp > 220:
+                power.set_voltage(0)
+                print('overtemp')
+                sys.exit()
+            if temp < set_point +1 and temp > set_point -1 and np.std(master_temp[-10:]) < .02:
+                for k in range(45):
                     temp = DAQ.measure_thermocouples([2])[0]
                     voltage = sum(temp_pid.Compute(temp,set_point,time()))
-                    itteration.append(temp)
-                    print('STD: ', np.std(itteration[-10:]))
-                    print('Temp: ' ,temp, 'voltage: ',voltage, '  I: ',i, '  P: ',p)
-                    print('set temp: ',it)
+                    master_temp.append(temp)
+                    print('STD: ', np.std(master_temp[-10:]))
                     power.set_voltage(voltage)
-                    if temp > 30:
-                        power.set_voltage(0)
-                        print('overtemp')
-                        sys.exit()
-                    if temp < set_point +1 and temp > set_point -1 and np.std(itteration[-10:]) < .009:
-                        for k in range(30):
-                            temp = DAQ.measure_thermocouples([2])[0]
-                            voltage = sum(temp_pid.Compute(temp,set_point,time()))
-                            itteration.append(temp)
-                            print('STD: ', np.std(itteration[-10:]))
-                            print('voltage: ',voltage, '  I: ',i, '  P: ',p)
-                            power.set_voltage(voltage)
-                            sleep(1)
-                        print('Next temp')
-                        break
                     sleep(1)
+                print('Next temp')
+                break
+            sleep(1)
 
 
-                except:
-                    power.set_voltage(0)
-                    print('Error')
-                    print(max(itteration))
-                    plt.plot(itteration)
-                    sys.exit()
-                    break
+        except:
+            power.set_voltage(0)
+            print('Error')
+            print(max(master_temp))
+            plt.plot(master_temp)
+            sys.exit()
+            break
 
-        master_temp.append(itteration)
-        master_temp.append(p)
-        master_temp.append(i)
 
-        power.set_voltage(0)
-        sleep(75)
+power.set_voltage(0)
+sleep(75)
 
 power.set_voltage(0)
 print('Error')
